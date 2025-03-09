@@ -34,7 +34,7 @@ class CNN(nn.Module):
         return x
 
 
-def predict_CNN(face):
+def predict_CNN(face, model):
     face = torch.tensor(face, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
     face = face.to(device)
     prediction = model(face)
@@ -80,8 +80,8 @@ def main():
                     face = frame[ymin:ymin+height, xmin:xmin+width]
                     face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
                     face = cv2.resize(face, (48, 48))
-                    prediction = predict_CNN(face)
-                    cv2.putText(frame, f'Emotion: {predict_CNN}', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                    prediction = predict_CNN(face, model)
+                    cv2.putText(frame, f'Emotion: {prediction}', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
                 except cv2.error as e:
                     print(f'Error {e}')
             
