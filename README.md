@@ -14,7 +14,6 @@ The dataset used for training and testing the model can be found [here](https://
 - PyTorch
 - NumPy
 - Matplotlib
-- scikit-learn
 
 ## Installation
 
