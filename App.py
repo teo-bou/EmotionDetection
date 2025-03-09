@@ -33,52 +33,66 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return x
 
-model = CNN()
-model.load_state_dict(torch.load('CNN_model.pth'))
-model.to(device)
-model.eval()
-# Initialize MediaPipe Face Detection
-mp_face_detection = mp.solutions.face_detection
-mp_drawing = mp.solutions.drawing_utils
 
-# Initialize webcam
-cap = cv2.VideoCapture(0)
+def predict_CNN(face):
+    face = torch.tensor(face, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+    face = face.to(device)
+    prediction = model(face)
+    prediction = F.softmax(prediction, dim=1)
+    prediction = torch.argmax(prediction, dim=1)
+    return classes[prediction.item()]
 
-with mp_face_detection.FaceDetection(min_detection_confidence=0.2) as face_detection:
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
 
-        # Convert the BGR image to RGB
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+def load_model():
+    model = CNN()
+    model.load_state_dict(torch.load('CNN_model.pth'))
+    model.to(device)
+    model.eval()
+    return model
 
-        # Process the frame and detect faces
-        results = face_detection.process(rgb_frame)
+def main():
+    model = load_model()
+    # Initialize MediaPipe Face Detection
+    mp_face_detection = mp.solutions.face_detection
+    mp_drawing = mp.solutions.drawing_utils
 
-        # Draw face detections
-        if results.detections:
-            try:
-                detection = results.detections[0]
-                mp_drawing.draw_detection(frame, detection)
-                xmin, ymin, width, height = int(detection.location_data.relative_bounding_box.xmin * frame.shape[1]), int(detection.location_data.relative_bounding_box.ymin * frame.shape[0]), int(detection.location_data.relative_bounding_box.width * frame.shape[1]), int(detection.location_data.relative_bounding_box.height * frame.shape[0])
-                face = frame[ymin:ymin+height, xmin:xmin+width]
-                face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
-                face = cv2.resize(face, (48, 48))
-                face = torch.tensor(face, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
-                face = face.to(device)
-                prediction = model(face)
-                prediction = F.softmax(prediction, dim=1)
-                prediction = torch.argmax(prediction, dim=1)
-                cv2.putText(frame, f'Emotion: {classes[prediction.item()]}', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-            except cv2.error as e:
-                print(f'Error {e}')
-        
-        # Display the frame
-        cv2.imshow('Face Detection', frame)
+    # Initialize webcam
+    cap = cv2.VideoCapture(0)
 
-        if cv2.waitKey(5) & 0xFF == 27:
-            break
+    with mp_face_detection.FaceDetection(min_detection_confidence=0.2) as face_detection:
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
 
-cap.release()
-cv2.destroyAllWindows()
+            # Convert the BGR image to RGB
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Process the frame and detect faces
+            results = face_detection.process(rgb_frame)
+
+            # Draw face detections
+            if results.detections:
+                try:
+                    detection = results.detections[0]
+                    mp_drawing.draw_detection(frame, detection)
+                    xmin, ymin, width, height = int(detection.location_data.relative_bounding_box.xmin * frame.shape[1]), int(detection.location_data.relative_bounding_box.ymin * frame.shape[0]), int(detection.location_data.relative_bounding_box.width * frame.shape[1]), int(detection.location_data.relative_bounding_box.height * frame.shape[0])
+                    face = frame[ymin:ymin+height, xmin:xmin+width]
+                    face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+                    face = cv2.resize(face, (48, 48))
+                    prediction = predict_CNN(face)
+                    cv2.putText(frame, f'Emotion: {predict_CNN}', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                except cv2.error as e:
+                    print(f'Error {e}')
+            
+            # Display the frame
+            cv2.imshow('Face Detection', frame)
+
+            if cv2.waitKey(5) & 0xFF == 27:
+                break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main()
